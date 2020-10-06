@@ -83,10 +83,10 @@ void readTSConfig()
         std::unique_ptr<char[]> buf(new char[size]);
 
         configFile.readBytes(buf.get(), size);
-        DynamicJsonBuffer jsonBuffer;
-        JsonObject& json = jsonBuffer.parseObject(buf.get());
-        json.printTo(Serial);
-        if (json.success()) {
+        DynamicJsonDocument json(1024);
+        DeserializationError error = deserializeJson(json, buf.get());
+        serializeJson(json, Serial);
+        if (!error) {
           //Serial.println("\nparsed json");
           strcpy(auth, json["auth"]);
 		  strcpy(server, json["server"]);
@@ -106,8 +106,7 @@ void saveTSConfig()
   //save the custom parameters to FS
   if (shouldSaveConfig) {
     //Serial.println("saving config");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject& json = jsonBuffer.createObject();
+    DynamicJsonDocument json(1024);
     json["auth"] = auth;
 	json["server"] = server;
     File configFile = SPIFFS.open("/config.json", "w");
@@ -115,8 +114,9 @@ void saveTSConfig()
       //Serial.println("failed to open config file for writing");
     }
 
-    json.printTo(Serial);
-    json.printTo(configFile);
+    serializeJson(json, Serial);
+    serializeJson(json, configFile);
+
     configFile.close();
     //end save
   }
